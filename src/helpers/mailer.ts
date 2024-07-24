@@ -33,12 +33,12 @@ const sendEmail = async ({ email, emailType, userId }: SendEmailOptions) => {
 
     await User.findByIdAndUpdate(userId, updateFields);
 
-    const transporter = nodemailer.createTransport({
+    var transport = nodemailer.createTransport({
       host: "sandbox.smtp.mailtrap.io",
       port: 2525,
       auth: {
-        user: "427349387b9943", // Replace with your actual user
-        pass: "********c1e5", // Replace with your actual password
+        user: "427349387b9943",
+        pass: "586e278872c1e5",
       },
     });
 
@@ -54,7 +54,7 @@ const sendEmail = async ({ email, emailType, userId }: SendEmailOptions) => {
       html: getEmailTemplate(emailType, hashedToken), // HTML body
     };
 
-    const mailResponse = await transporter.sendMail(mailOptions);
+    const mailResponse = await transport.sendMail(mailOptions);
     return mailResponse;
   } catch (error: any) {
     throw new Error(error.message);
