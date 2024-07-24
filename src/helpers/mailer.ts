@@ -1,29 +1,64 @@
+import User from "@/models/userModel";
 import nodemailer from "nodemailer";
+import bcryptjs from "bcryptjs";
 
-export const sendEmail = async ({ email, emailType, userId }: any) => {
+interface SendEmailOptions {
+  email: string;
+  emailType: "VERIFY" | "RESET";
+  userId: string;
+}
+
+const getEmailTemplate = (emailType: "VERIFY" | "RESET", token: string) => {
+  const action =
+    emailType === "VERIFY" ? "verify your email" : "reset your password";
+  return `
+    <p>
+      Click <a href="${process.env.DOMAIN}/verifyemail?token=${token}">here</a> to ${action} or copy and paste the link below in your browser.
+      <br>
+      ${process.env.DOMAIN}/verifyemail?token=${token}
+    </p>
+  `;
+};
+
+const sendEmail = async ({ email, emailType, userId }: SendEmailOptions) => {
   try {
-    //TODO: configure mail for usage
+    const hashedToken = await bcryptjs.hash(userId.toString(), 10);
+    const updateFields =
+      emailType === "VERIFY"
+        ? { verifyToken: hashedToken, verifyTokenExpiry: Date.now() + 3600000 }
+        : {
+            forgotPasswordToken: hashedToken,
+            forgotPasswordTokenExpiry: Date.now() + 3600000,
+          };
+
+    await User.findByIdAndUpdate(userId, updateFields);
+
     const transporter = nodemailer.createTransport({
-      host: "smtp.ethereal.email",
-      port: 587,
-      secure: false, // Use `true` for port 465, `false` for all other ports
+      host: "sandbox.smtp.mailtrap.io",
+      port: 2525,
       auth: {
-        user: "maddison53@ethereal.email",
-        pass: "jn7jnAPss4f63QBp6D",
+        user: "427349387b9943", // Replace with your actual user
+        pass: "********c1e5", // Replace with your actual password
       },
     });
 
     const mailOptions = {
-      from: "balvantkumarsing3@gmail.com", // sender address
+      from: "balvantkumarsingh3@gmail.com", // sender address
       to: email, // list of receivers
       subject:
         emailType === "VERIFY" ? "Verify your email" : "Reset your password", // Subject line
-      html: "<b>Hello world?</b>", // html body
+      text:
+        emailType === "VERIFY"
+          ? "Please verify your email by clicking the link below."
+          : "Please reset your password by clicking the link below.", // plain text body
+      html: getEmailTemplate(emailType, hashedToken), // HTML body
     };
 
     const mailResponse = await transporter.sendMail(mailOptions);
     return mailResponse;
   } catch (error: any) {
-    throw new error(error.message);
+    throw new Error(error.message);
   }
 };
+
+export default sendEmail;
